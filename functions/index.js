@@ -9,6 +9,7 @@ exports.health = functions.https.onRequest((req, res) => {
 });
 
 exports.grantReward = rewardService.grantReward;
+exports.processRedeem = redeemService.processRedeem;
 exports.rewardService = rewardService;
 exports.redeemService = redeemService;
 exports.userService = userService;
