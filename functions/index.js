@@ -8,6 +8,7 @@ exports.health = functions.https.onRequest((req, res) => {
   res.status(200).json({ status: 'ok', service: 'moviebox-functions' });
 });
 
+exports.grantReward = rewardService.grantReward;
 exports.rewardService = rewardService;
 exports.redeemService = redeemService;
 exports.userService = userService;
