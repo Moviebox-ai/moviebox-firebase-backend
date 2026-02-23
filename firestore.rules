@@ -86,6 +86,15 @@ service cloud.firestore {
     }
 
     // =========================
+    // ADMIN LOGS
+    // =========================
+    match /adminLogs/{logId} {
+      allow read: if isAdmin();
+      allow create: if isAdmin();
+      allow update, delete: if false;
+    }
+
+    // =========================
     // ADMINS
     // =========================
     match /admins/{adminId} {
