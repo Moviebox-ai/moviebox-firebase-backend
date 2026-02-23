@@ -25,3 +25,9 @@ If you are calling Firebase Cloud Functions from an Android app, add the Functio
 ```gradle
 implementation 'com.google.firebase:firebase-functions-ktx'
 ```
+
+For Kotlin DSL (`build.gradle.kts`), use:
+
+```kotlin
+implementation("com.google.firebase:firebase-functions-ktx")
+```
