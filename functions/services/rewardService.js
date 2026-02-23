@@ -62,7 +62,7 @@ module.exports = {
 
       const currentCoins = Number(user.totalCoins) || 0;
       const currentDailyAdCount = Number(user.dailyAdCount) || 0;
-      let riskScore = Number(user.riskScore) || 0;
+      let riskScore = Math.max(0, (Number(user.riskScore) || 0) - 10);
 
       const lastRewardMillis = Number(user.lastRewardMillis) || 0;
       const now = Date.now();
