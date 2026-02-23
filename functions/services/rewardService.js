@@ -12,6 +12,7 @@ module.exports = {
     }
 
     const uid = context.auth.uid;
+    const deviceHash = typeof data?.deviceHash === 'string' ? data.deviceHash.trim() : '';
     const db = admin.firestore();
 
     const userRef = db.collection('users').doc(uid);
@@ -39,6 +40,16 @@ module.exports = {
       throw new functions.https.HttpsError('failed-precondition', 'Rewards disabled');
     }
 
+    const forwardedFor = context.rawRequest?.headers?.['x-forwarded-for'];
+    const ipFromForwardedFor = Array.isArray(forwardedFor)
+      ? forwardedFor[0]
+      : (forwardedFor || '').split(',')[0];
+    const ip = (ipFromForwardedFor || context.rawRequest?.connection?.remoteAddress || '').trim();
+
+    const ipUsageSnapshot = ip
+      ? await db.collection('users').where('lastIP', '==', ip).get()
+      : null;
+
     const transactionResult = await db.runTransaction(async (transaction) => {
       const userSnap = await transaction.get(userRef);
 
@@ -50,6 +61,32 @@ module.exports = {
 
       if (user.banned) {
         throw new functions.https.HttpsError('permission-denied', 'User banned');
+      }
+
+      if (ipUsageSnapshot && ipUsageSnapshot.size > 3) {
+        transaction.update(userRef, {
+          banned: true
+        });
+        return {
+          shouldThrow: true,
+          code: 'permission-denied',
+          message: 'Multiple accounts from same IP',
+          shouldLogAbuse: true,
+          abuseReason: 'Multiple accounts from same IP'
+        };
+      }
+
+      if (user.deviceHash && deviceHash && user.deviceHash !== deviceHash) {
+        transaction.update(userRef, {
+          banned: true
+        });
+        return {
+          shouldThrow: true,
+          code: 'permission-denied',
+          message: 'Device mismatch detected',
+          shouldLogAbuse: true,
+          abuseReason: 'Device fingerprint mismatch'
+        };
       }
 
       const currentCoins = Number(user.totalCoins) || 0;
@@ -95,7 +132,9 @@ module.exports = {
         dailyAdCount: currentDailyAdCount + 1,
         lastRewardMillis: now,
         lastRewardTime: admin.firestore.FieldValue.serverTimestamp(),
-        suspiciousCount: 0
+        suspiciousCount: 0,
+        ...(ip && { lastIP: ip }),
+        ...(deviceHash && { deviceHash })
       });
 
       return { success: true };
@@ -105,7 +144,8 @@ module.exports = {
       if (transactionResult.shouldLogAbuse) {
         await db.collection('abuseLogs').add({
           uid,
-          reason: 'Rapid reward abuse',
+          reason: transactionResult.abuseReason || 'Rapid reward abuse',
+          ...(ip && { ip }),
           timestamp: admin.firestore.FieldValue.serverTimestamp()
         });
       }
