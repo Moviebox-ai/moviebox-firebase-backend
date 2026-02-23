@@ -1,5 +1,6 @@
 const functions = require('firebase-functions');
 const admin = require('firebase-admin');
+const { normalizeRewardIntent } = require('../utils/rewardIntent');
 
 if (admin.apps.length === 0) {
   admin.initializeApp();
@@ -13,7 +14,15 @@ module.exports = {
 
     const uid = context.auth.uid;
     const deviceHash = typeof data?.deviceHash === 'string' ? data.deviceHash.trim() : '';
+    const rewardIntent = normalizeRewardIntent(data?.rewardIntent);
     const db = admin.firestore();
+
+    if (!rewardIntent) {
+      throw new functions.https.HttpsError(
+        'invalid-argument',
+        'Reward can only be granted after user voluntarily taps "Watch Ad to Support Us"'
+      );
+    }
 
     const userRef = db.collection('users').doc(uid);
     const configRef = db.collection('config').doc('appSettings');
@@ -133,6 +142,7 @@ module.exports = {
         dailyAdCount: currentDailyAdCount + 1,
         lastRewardMillis: now,
         lastRewardTime: admin.firestore.FieldValue.serverTimestamp(),
+        lastRewardIntent: rewardIntent,
         riskScore,
         riskLevel,
         ...(ip && { lastIP: ip }),
