@@ -40,7 +40,7 @@ exports.rewardService = rewardService;
 exports.redeemService = redeemService;
 exports.userService = userService;
 
-exports.trackBehavior = functions.https.onCall(async (data, context) => {
+exports.logBehaviorEvent = functions.https.onCall(async (data, context) => {
   if (!context.auth || !context.auth.uid) {
     throw new functions.https.HttpsError('unauthenticated', 'Authentication is required.');
   }
@@ -48,19 +48,18 @@ exports.trackBehavior = functions.https.onCall(async (data, context) => {
   const uid = context.auth.uid;
   const rewardClicks = data.rewardClicks;
   const sessionDuration = data.sessionDuration;
+  const deviceHash = data.deviceHash;
 
   await admin
     .firestore()
-    .collection('riskProfile')
-    .doc(uid)
-    .set(
-      {
-        rewardClicks,
-        sessionDuration,
-        updatedAt: admin.firestore.FieldValue.serverTimestamp()
-      },
-      { merge: true }
-    );
+    .collection('behaviorLogs')
+    .add({
+      uid,
+      rewardClicks,
+      sessionDuration,
+      deviceHash,
+      timestamp: admin.firestore.FieldValue.serverTimestamp()
+    });
 
   return { success: true };
 });
