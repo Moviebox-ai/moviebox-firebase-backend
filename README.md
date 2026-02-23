@@ -17,3 +17,11 @@ Starter structure for a Firebase-backed MovieBox admin panel with Cloud Function
    cd functions && npm install
    ```
 4. Update security rules and service logic based on your product requirements.
+
+## Android client dependency
+
+If you are calling Firebase Cloud Functions from an Android app, add the Functions KTX SDK to your app module dependencies:
+
+```gradle
+implementation 'com.google.firebase:firebase-functions-ktx'
+```
