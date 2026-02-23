@@ -7,6 +7,7 @@ import {
   query,
   startAfter,
   updateDoc,
+  where,
 } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
 import { db } from './firebase-config.js';
 
@@ -133,18 +134,47 @@ window.loadUsers = async function loadUsers() {
   lastVisible = snapshot.docs[snapshot.docs.length - 1] ?? lastVisible;
 };
 
-window.searchUser = function searchUser() {
+window.searchUser = async function searchUser() {
   if (!userList) {
     return;
   }
 
   const email = document.getElementById('searchEmail')?.value?.trim();
 
-  userList.innerHTML = `
-    <ul>
-      <li>${email ? `No results found for ${email}.` : 'Enter an email address to search.'}</li>
-    </ul>
-  `;
+  if (!email) {
+    userList.innerHTML = `
+      <ul>
+        <li>Enter an email address to search.</li>
+      </ul>
+    `;
+    return;
+  }
+
+  const snapshot = await getDocs(query(collection(db, 'users'), where('email', '==', email)));
+
+  userList.innerHTML = '';
+
+  if (snapshot.empty) {
+    userList.innerHTML = `
+      <ul>
+        <li>No results found for ${email}.</li>
+      </ul>
+    `;
+    return;
+  }
+
+  snapshot.forEach((docSnap) => {
+    const user = docSnap.data();
+    const userCard = document.createElement('div');
+
+    userCard.innerHTML = `
+      ${user.email ?? 'Unknown email'} |
+      Coins: ${user.totalCoins ?? 0} |
+      Risk: ${user.riskLevel ?? 'n/a'}
+    `;
+
+    userList.appendChild(userCard);
+  });
 };
 
 window.loadMoreUsers = function loadMoreUsers() {
