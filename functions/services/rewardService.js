@@ -1,5 +1,6 @@
 const functions = require('firebase-functions');
 const admin = require('firebase-admin');
+const { evaluateRisk } = require('../utils/riskAssessment');
 
 if (admin.apps.length === 0) {
   admin.initializeApp();
@@ -13,6 +14,10 @@ module.exports = {
 
     const uid = context.auth.uid;
     const deviceHash = typeof data?.deviceHash === 'string' ? data.deviceHash.trim() : '';
+    const riskResult = evaluateRisk({
+      riskLevel: data?.riskLevel,
+      riskScore: data?.riskScore
+    });
     const db = admin.firestore();
 
     const userRef = db.collection('users').doc(uid);
@@ -62,6 +67,40 @@ module.exports = {
 
       if (user.banned) {
         throw new functions.https.HttpsError('permission-denied', 'User banned');
+      }
+
+      if (riskResult.action === 'ban') {
+        transaction.update(userRef, {
+          banned: true
+        });
+        return {
+          shouldThrow: true,
+          code: 'permission-denied',
+          message: riskResult.reason,
+          shouldLogAbuse: true,
+          abuseReason: riskResult.reason
+        };
+      }
+
+      if (riskResult.action === 'deny') {
+        const updatedSuspiciousCount = (Number(user.suspiciousCount) || 0) + 1;
+        transaction.update(userRef, {
+          suspiciousCount: updatedSuspiciousCount
+        });
+        return {
+          shouldThrow: true,
+          code: 'permission-denied',
+          message: riskResult.reason,
+          shouldLogAbuse: true,
+          abuseReason: riskResult.reason
+        };
+      }
+
+      if (riskResult.action === 'flag') {
+        const updatedSuspiciousCount = (Number(user.suspiciousCount) || 0) + 1;
+        transaction.update(userRef, {
+          suspiciousCount: updatedSuspiciousCount
+        });
       }
 
       if (ipUsageSnapshot && ipUsageSnapshot.size > 3) {
@@ -146,6 +185,8 @@ module.exports = {
         await db.collection('abuseLogs').add({
           uid,
           reason: transactionResult.abuseReason || 'Rapid reward abuse',
+          ...(riskResult.riskLevel && { riskLevel: riskResult.riskLevel }),
+          ...(riskResult.riskScore !== null && { riskScore: riskResult.riskScore }),
           ...(ip && { ip }),
           timestamp: admin.firestore.FieldValue.serverTimestamp()
         });
