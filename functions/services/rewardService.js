@@ -88,10 +88,19 @@ module.exports = {
       let riskScore = getBaseRiskScore(user.riskScore);
 
       let crowdedIp = false;
+      let sharedDeviceHash = false;
 
       if (ip) {
         const ipSnapshot = await db.collection('users').where('lastIP', '==', ip).get();
         crowdedIp = ipSnapshot.size > 3;
+      }
+
+      if (deviceHash) {
+        const similarDevices = await db
+          .collection('behaviorLogs')
+          .where('deviceHash', '==', deviceHash)
+          .get();
+        sharedDeviceHash = similarDevices.size > 3;
       }
 
       const behaviorSignals = getRewardRequestSignals({
@@ -105,6 +114,10 @@ module.exports = {
         baseRiskScore: riskScore,
         ...behaviorSignals
       });
+
+      if (sharedDeviceHash) {
+        riskScore += 50;
+      }
 
       const riskLevel = getRiskLevel(riskScore);
 
