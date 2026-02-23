@@ -31,6 +31,10 @@ h1 {
   margin-bottom: var(--spacing-16dp);
 }
 
+.banner {
+  margin-bottom: calc(var(--spacing-16dp) * 1.5);
+}
+
 input {
   width: 100%;
   box-sizing: border-box;
@@ -50,6 +54,10 @@ button {
   color: #fff;
   cursor: pointer;
   font-size: 0.95rem;
+}
+
+.next-button {
+  margin-top: calc(var(--spacing-16dp) * 0.5);
 }
 
 #error {
