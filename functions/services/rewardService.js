@@ -1,6 +1,5 @@
 const functions = require('firebase-functions');
 const admin = require('firebase-admin');
-const { evaluateRisk } = require('../utils/riskAssessment');
 
 if (admin.apps.length === 0) {
   admin.initializeApp();
@@ -14,10 +13,6 @@ module.exports = {
 
     const uid = context.auth.uid;
     const deviceHash = typeof data?.deviceHash === 'string' ? data.deviceHash.trim() : '';
-    const riskResult = evaluateRisk({
-      riskLevel: data?.riskLevel,
-      riskScore: data?.riskScore
-    });
     const db = admin.firestore();
 
     const userRef = db.collection('users').doc(uid);
@@ -52,10 +47,6 @@ module.exports = {
       : (forwardedFor || '').split(',')[0];
     const ip = (ipFromForwardedFor || context.rawRequest?.connection?.remoteAddress || clientReportedIp || '').trim();
 
-    const ipUsageSnapshot = ip
-      ? await db.collection('users').where('lastIP', '==', ip).get()
-      : null;
-
     const transactionResult = await db.runTransaction(async (transaction) => {
       const userSnap = await transaction.get(userRef);
 
@@ -69,98 +60,68 @@ module.exports = {
         throw new functions.https.HttpsError('permission-denied', 'User banned');
       }
 
-      if (riskResult.action === 'ban') {
-        transaction.update(userRef, {
-          banned: true
-        });
-        return {
-          shouldThrow: true,
-          code: 'permission-denied',
-          message: riskResult.reason,
-          shouldLogAbuse: true,
-          abuseReason: riskResult.reason
-        };
-      }
-
-      if (riskResult.action === 'deny') {
-        const updatedSuspiciousCount = (Number(user.suspiciousCount) || 0) + 1;
-        transaction.update(userRef, {
-          suspiciousCount: updatedSuspiciousCount
-        });
-        return {
-          shouldThrow: true,
-          code: 'permission-denied',
-          message: riskResult.reason,
-          shouldLogAbuse: true,
-          abuseReason: riskResult.reason
-        };
-      }
-
-      if (riskResult.action === 'flag') {
-        const updatedSuspiciousCount = (Number(user.suspiciousCount) || 0) + 1;
-        transaction.update(userRef, {
-          suspiciousCount: updatedSuspiciousCount
-        });
-      }
-
-      if (ipUsageSnapshot && ipUsageSnapshot.size > 3) {
-        transaction.update(userRef, {
-          banned: true
-        });
-        return {
-          shouldThrow: true,
-          code: 'permission-denied',
-          message: 'Multiple accounts from same IP',
-          shouldLogAbuse: true,
-          abuseReason: 'Multiple accounts from same IP'
-        };
-      }
-
-      if (user.deviceHash && deviceHash && user.deviceHash !== deviceHash) {
-        transaction.update(userRef, {
-          banned: true
-        });
-        return {
-          shouldThrow: true,
-          code: 'permission-denied',
-          message: 'Device mismatch detected',
-          shouldLogAbuse: true,
-          abuseReason: 'Device fingerprint mismatch'
-        };
-      }
-
       const currentCoins = Number(user.totalCoins) || 0;
       const currentDailyAdCount = Number(user.dailyAdCount) || 0;
-      const currentSuspiciousCount = Number(user.suspiciousCount) || 0;
+      let riskScore = Number(user.riskScore) || 0;
+
       const lastRewardMillis = Number(user.lastRewardMillis) || 0;
       const now = Date.now();
       const minRewardIntervalMs = 20000;
-      const suspiciousBanThreshold = 3;
+      const timeDiff = now - lastRewardMillis;
 
-      if (now - lastRewardMillis < minRewardIntervalMs) {
-        const updatedSuspiciousCount = currentSuspiciousCount + 1;
+      if (timeDiff < minRewardIntervalMs) {
+        riskScore += 20;
+      }
 
-        if (updatedSuspiciousCount >= suspiciousBanThreshold) {
-          transaction.update(userRef, {
-            banned: true,
-            suspiciousCount: updatedSuspiciousCount
-          });
-          return {
-            shouldThrow: true,
-            code: 'permission-denied',
-            message: 'Auto banned for abuse',
-            shouldLogAbuse: true
-          };
+      if (user.deviceHash && deviceHash && user.deviceHash !== deviceHash) {
+        riskScore += 40;
+      }
+
+      if (ip) {
+        const ipSnapshot = await db.collection('users').where('lastIP', '==', ip).get();
+
+        if (ipSnapshot.size > 3) {
+          riskScore += 30;
         }
+      }
 
+      let riskLevel = 'safe';
+
+      if (riskScore >= 100) {
         transaction.update(userRef, {
-          suspiciousCount: updatedSuspiciousCount
+          banned: true,
+          riskScore,
+          riskLevel: 'banned'
+        });
+        return {
+          shouldThrow: true,
+          code: 'permission-denied',
+          message: 'Auto banned',
+          shouldLogAbuse: true,
+          abuseReason: 'Risk score reached ban threshold',
+          riskScore,
+          riskLevel: 'banned'
+        };
+      }
+
+      if (riskScore >= 60) {
+        transaction.update(userRef, {
+          riskScore,
+          riskLevel: 'high'
         });
         return {
           shouldThrow: true,
           code: 'resource-exhausted',
-          message: 'Too fast reward attempt'
+          message: 'Reward temporarily disabled',
+          shouldLogAbuse: true,
+          abuseReason: 'High risk reward request blocked',
+          riskScore,
+          riskLevel: 'high'
         };
+      }
+
+      if (riskScore >= 30) {
+        riskLevel = 'suspicious';
       }
 
       if (currentDailyAdCount >= dailyLimit) {
@@ -172,12 +133,13 @@ module.exports = {
         dailyAdCount: currentDailyAdCount + 1,
         lastRewardMillis: now,
         lastRewardTime: admin.firestore.FieldValue.serverTimestamp(),
-        suspiciousCount: 0,
+        riskScore,
+        riskLevel,
         ...(ip && { lastIP: ip }),
         ...(deviceHash && { deviceHash })
       });
 
-      return { success: true };
+      return { success: true, riskLevel };
     });
 
     if (transactionResult.shouldThrow) {
@@ -185,8 +147,8 @@ module.exports = {
         await db.collection('abuseLogs').add({
           uid,
           reason: transactionResult.abuseReason || 'Rapid reward abuse',
-          ...(riskResult.riskLevel && { riskLevel: riskResult.riskLevel }),
-          ...(riskResult.riskScore !== null && { riskScore: riskResult.riskScore }),
+          ...(transactionResult.riskLevel && { riskLevel: transactionResult.riskLevel }),
+          ...(Number.isFinite(transactionResult.riskScore) && { riskScore: transactionResult.riskScore }),
           ...(ip && { ip }),
           timestamp: admin.firestore.FieldValue.serverTimestamp()
         });
