@@ -1,4 +1,13 @@
-import { collection, getDocs } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+import {
+  collection,
+  doc,
+  getDocs,
+  limit,
+  orderBy,
+  query,
+  startAfter,
+  updateDoc,
+} from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
 import { db } from './firebase-config.js';
 
 const stats = document.getElementById('stats');
@@ -74,16 +83,54 @@ window.saveSettings = function saveSettings() {
   });
 };
 
-window.loadUsers = function loadUsers() {
+let lastVisible = null;
+
+window.loadUsers = async function loadUsers() {
   if (!userList) {
     return;
   }
 
-  userList.innerHTML = `
-    <ul>
-      <li>No users loaded yet.</li>
-    </ul>
-  `;
+  const usersCollection = collection(db, 'users');
+  const usersQuery = lastVisible
+    ? query(usersCollection, orderBy('email'), startAfter(lastVisible), limit(10))
+    : query(usersCollection, orderBy('email'), limit(10));
+
+  const snapshot = await getDocs(usersQuery);
+
+  if (!lastVisible) {
+    userList.innerHTML = '';
+  }
+
+  if (snapshot.empty && !lastVisible) {
+    userList.innerHTML = `
+      <ul>
+        <li>No users found.</li>
+      </ul>
+    `;
+    return;
+  }
+
+  snapshot.forEach((docSnap) => {
+    const user = docSnap.data();
+    const userCard = document.createElement('div');
+
+    userCard.innerHTML = `
+      ${user.email ?? 'Unknown email'} |
+      Coins: ${user.totalCoins ?? 0} |
+      Risk: ${user.riskLevel ?? 'n/a'}
+      <button data-user-id="${docSnap.id}">
+        ${user.banned ? 'Unban' : 'Ban'}
+      </button>
+    `;
+
+    userCard.querySelector('button')?.addEventListener('click', () => {
+      window.banUser(docSnap.id, user.banned);
+    });
+
+    userList.appendChild(userCard);
+  });
+
+  lastVisible = snapshot.docs[snapshot.docs.length - 1] ?? lastVisible;
 };
 
 window.searchUser = function searchUser() {
@@ -101,18 +148,15 @@ window.searchUser = function searchUser() {
 };
 
 window.loadMoreUsers = function loadMoreUsers() {
-  if (!userList) {
-    return;
-  }
+  void window.loadUsers();
+};
 
-  userList.insertAdjacentHTML(
-    'beforeend',
-    `
-      <ul>
-        <li>No additional users available.</li>
-      </ul>
-    `,
-  );
+window.banUser = async function banUser(userId, currentlyBanned = false) {
+  const userRef = doc(db, 'users', userId);
+  await updateDoc(userRef, { banned: !currentlyBanned });
+
+  lastVisible = null;
+  void window.loadUsers();
 };
 
 window.loadRedeems = function loadRedeems() {
