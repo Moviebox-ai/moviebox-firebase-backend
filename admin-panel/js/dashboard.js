@@ -28,7 +28,7 @@ window.showSection = function showSection(sectionId) {
   document.getElementById(sectionId).classList.remove('hidden');
 };
 
-async function loadOverviewStats() {
+async function loadOverview() {
   if (!totalUsersEl || !totalCoinsEl || !bannedUsersEl) {
     return;
   }
@@ -37,22 +37,22 @@ async function loadOverviewStats() {
 
   let totalUsers = 0;
   let totalCoins = 0;
-  let bannedUsers = 0;
+  let banned = 0;
 
   snapshot.forEach((docSnap) => {
     const user = docSnap.data();
 
     totalUsers += 1;
     totalCoins += Number(user.totalCoins ?? 0);
-    if (user.banned) bannedUsers += 1;
+    if (user.banned) banned += 1;
   });
 
-  totalUsersEl.textContent = `Total Users: ${totalUsers}`;
-  totalCoinsEl.textContent = `Total Coins: ${totalCoins}`;
-  bannedUsersEl.textContent = `Banned Users: ${bannedUsers}`;
+  totalUsersEl.innerText = `Total Users: ${totalUsers}`;
+  totalCoinsEl.innerText = `Total Coins: ${totalCoins}`;
+  bannedUsersEl.innerText = `Banned Users: ${banned}`;
 }
 
-void loadOverviewStats();
+void loadOverview();
 
 window.saveSettings = function saveSettings() {
   const minDailyLimit = 10;
@@ -185,7 +185,7 @@ window.banUser = async function banUser(userId, currentlyBanned = false) {
 
   lastVisible = null;
   void window.loadUsers();
-  void loadOverviewStats();
+  void loadOverview();
 };
 
 window.loadRedeems = function loadRedeems() {
