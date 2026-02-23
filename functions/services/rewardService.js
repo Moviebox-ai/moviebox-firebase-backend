@@ -8,6 +8,9 @@ if (admin.apps.length === 0) {
 
 module.exports = {
   grantReward: functions.https.onCall(async (data, context) => {
+    const MIN_DAILY_REWARD_LIMIT = 10;
+    const MAX_DAILY_REWARD_LIMIT = 15;
+
     if (!context.auth) {
       throw new functions.https.HttpsError('unauthenticated', 'Login required');
     }
@@ -41,8 +44,16 @@ module.exports = {
       throw new functions.https.HttpsError('failed-precondition', 'Invalid coin reward config');
     }
 
-    if (!Number.isFinite(dailyLimit) || dailyLimit < 0) {
-      throw new functions.https.HttpsError('failed-precondition', 'Invalid daily limit config');
+    if (
+      !Number.isFinite(dailyLimit)
+      || !Number.isInteger(dailyLimit)
+      || dailyLimit < MIN_DAILY_REWARD_LIMIT
+      || dailyLimit > MAX_DAILY_REWARD_LIMIT
+    ) {
+      throw new functions.https.HttpsError(
+        'failed-precondition',
+        `Invalid daily limit config. Must be an integer between ${MIN_DAILY_REWARD_LIMIT} and ${MAX_DAILY_REWARD_LIMIT}`
+      );
     }
 
     if (!config.rewardsEnabled) {
