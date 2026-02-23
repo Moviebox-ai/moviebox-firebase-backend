@@ -39,3 +39,28 @@ exports.processRedeem = redeemService.processRedeem;
 exports.rewardService = rewardService;
 exports.redeemService = redeemService;
 exports.userService = userService;
+
+exports.trackBehavior = functions.https.onCall(async (data, context) => {
+  if (!context.auth || !context.auth.uid) {
+    throw new functions.https.HttpsError('unauthenticated', 'Authentication is required.');
+  }
+
+  const uid = context.auth.uid;
+  const rewardClicks = data.rewardClicks;
+  const sessionDuration = data.sessionDuration;
+
+  await admin
+    .firestore()
+    .collection('riskProfile')
+    .doc(uid)
+    .set(
+      {
+        rewardClicks,
+        sessionDuration,
+        updatedAt: admin.firestore.FieldValue.serverTimestamp()
+      },
+      { merge: true }
+    );
+
+  return { success: true };
+});
