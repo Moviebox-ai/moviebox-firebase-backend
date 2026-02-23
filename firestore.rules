@@ -4,66 +4,90 @@ service cloud.firestore {
 
     function isAdmin() {
       return request.auth != null &&
-             exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid));
     }
 
+    function isOwner(userId) {
+      return request.auth != null && request.auth.uid == userId;
+    }
+
+    // =========================
+    // USERS
+    // =========================
     match /users/{userId} {
 
-      allow read: if request.auth != null
-                  && request.auth.uid == userId;
+      // Read: Owner or Admin
+      allow read: if isOwner(userId) || isAdmin();
 
-      allow read: if isAdmin();
+      // Create own document
+      allow create: if isOwner(userId);
 
-      allow create: if request.auth != null
-                    && request.auth.uid == userId;
+      // User limited update
+      allow update: if isOwner(userId)
+        && request.resource.data.diff(resource.data)
+           .changedKeys()
+           .hasOnly(["displayName"]);
 
-      allow update: if request.auth != null
-                    && request.auth.uid == userId
-                    && request.resource.data.diff(resource.data)
-                       .changedKeys()
-                       .hasOnly(["displayName"]);
-
+      // Admin can ONLY ban/unban
       allow update: if isAdmin()
-                    && request.resource.data.diff(resource.data)
-                       .changedKeys()
-                       .hasOnly(["banned", "totalCoins"]);
+        && request.resource.data.diff(resource.data)
+           .changedKeys()
+           .hasOnly(["banned"]);
 
       allow delete: if false;
     }
 
+    // =========================
+    // CONFIG
+    // =========================
     match /config/{doc} {
       allow read: if true;
       allow write: if isAdmin();
     }
 
+    // =========================
+    // REDEEM REQUESTS
+    // =========================
     match /redeemRequests/{requestId} {
+
+      // Admin read all
       allow read: if isAdmin();
-      allow create: if request.auth != null;
+
+      // User create own redeem
+      allow create: if request.auth != null
+        && request.resource.data.keys()
+           .hasOnly(["uid", "email", "amount", "status", "createdAt"])
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.amount is int
+        && request.resource.data.amount > 0
+        && request.resource.data.amount <= 100000
+        && request.resource.data.status == "pending";
+
+      // Admin update only status
       allow update: if isAdmin()
-                    && request.resource.data.diff(resource.data)
-                       .changedKeys()
-                       .hasOnly(["status"]);
+        && request.resource.data.diff(resource.data)
+           .changedKeys()
+           .hasOnly(["status"]);
+
       allow delete: if false;
     }
 
+    // =========================
+    // ABUSE LOGS
+    // =========================
     match /abuseLogs/{logId} {
+
       allow read: if isAdmin();
 
-      allow create: if request.auth != null
-                    && request.resource.data.keys()
-                       .hasOnly(["uid", "reason", "ip", "timestamp"])
-                    && request.resource.data.uid == request.auth.uid
-                    && request.resource.data.reason is string
-                    && request.resource.data.reason.size() > 0
-                    && request.resource.data.reason.size() <= 500
-                    && request.resource.data.ip is string
-                    && request.resource.data.ip.size() > 0
-                    && request.resource.data.ip.size() <= 64
-                    && request.resource.data.timestamp is timestamp;
+      // Only Cloud Functions should write ideally
+      allow create: if isAdmin();
 
       allow update, delete: if false;
     }
 
+    // =========================
+    // ADMINS
+    // =========================
     match /admins/{adminId} {
       allow read: if request.auth != null
                   && request.auth.uid == adminId;
