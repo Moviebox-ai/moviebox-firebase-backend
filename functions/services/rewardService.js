@@ -71,7 +71,8 @@ module.exports = {
           return {
             shouldThrow: true,
             code: 'permission-denied',
-            message: 'Auto banned for abuse'
+            message: 'Auto banned for abuse',
+            shouldLogAbuse: true
           };
         }
 
@@ -101,6 +102,14 @@ module.exports = {
     });
 
     if (transactionResult.shouldThrow) {
+      if (transactionResult.shouldLogAbuse) {
+        await db.collection('abuseLogs').add({
+          uid,
+          reason: 'Rapid reward abuse',
+          timestamp: admin.firestore.FieldValue.serverTimestamp()
+        });
+      }
+
       throw new functions.https.HttpsError(transactionResult.code, transactionResult.message);
     }
 
