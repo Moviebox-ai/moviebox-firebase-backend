@@ -201,16 +201,31 @@ window.loadRedeems = function loadRedeems() {
   `;
 };
 
-window.loadAbuseLogs = function loadAbuseLogs() {
+window.loadAbuseLogs = async function loadAbuseLogs() {
   if (!abuseList) {
     return;
   }
 
-  abuseList.innerHTML = `
-    <ul>
-      <li>No fraud logs loaded yet.</li>
-    </ul>
-  `;
+  const snapshot = await getDocs(collection(db, 'abuseLogs'));
+
+  abuseList.innerHTML = '';
+
+  if (snapshot.empty) {
+    abuseList.innerHTML = `
+      <ul>
+        <li>No fraud logs found.</li>
+      </ul>
+    `;
+    return;
+  }
+
+  snapshot.forEach((docSnap) => {
+    const log = docSnap.data();
+    const logCard = document.createElement('div');
+
+    logCard.textContent = `UID: ${log.uid ?? 'unknown'} | Reason: ${log.reason ?? 'unspecified'}`;
+    abuseList.appendChild(logCard);
+  });
 };
 
 window.loadAdminLogs = function loadAdminLogs() {
