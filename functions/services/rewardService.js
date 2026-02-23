@@ -40,11 +40,12 @@ module.exports = {
       throw new functions.https.HttpsError('failed-precondition', 'Rewards disabled');
     }
 
+    const clientReportedIp = typeof data?.lastIP === 'string' ? data.lastIP.trim() : '';
     const forwardedFor = context.rawRequest?.headers?.['x-forwarded-for'];
     const ipFromForwardedFor = Array.isArray(forwardedFor)
       ? forwardedFor[0]
       : (forwardedFor || '').split(',')[0];
-    const ip = (ipFromForwardedFor || context.rawRequest?.connection?.remoteAddress || '').trim();
+    const ip = (ipFromForwardedFor || context.rawRequest?.connection?.remoteAddress || clientReportedIp || '').trim();
 
     const ipUsageSnapshot = ip
       ? await db.collection('users').where('lastIP', '==', ip).get()
