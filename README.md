@@ -1,0 +1,19 @@
+# moviebox-firebase-backend
+
+Starter structure for a Firebase-backed MovieBox admin panel with Cloud Functions scaffold.
+
+## Structure
+
+- Firebase root config files
+- `admin-panel/` static frontend pages
+- `functions/` backend services scaffold for future secure upgrades
+
+## Next steps
+
+1. Replace Firebase project ID in `.firebaserc`.
+2. Add real Firebase SDK config in `admin-panel/js/firebase-config.js`.
+3. Install functions dependencies:
+   ```bash
+   cd functions && npm install
+   ```
+4. Update security rules and service logic based on your product requirements.
