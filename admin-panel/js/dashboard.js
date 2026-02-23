@@ -11,7 +11,13 @@ import {
   updateDoc,
   where,
 } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+import {
+  getIdTokenResult,
+  onAuthStateChanged,
+  signOut,
+} from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
 import { auth, db } from './firebase-config.js';
+import { hasAdminAccess } from './admin-access.js';
 
 const totalUsersEl = document.getElementById('totalUsers');
 const totalCoinsEl = document.getElementById('totalCoins');
@@ -20,6 +26,21 @@ const userList = document.getElementById('userList');
 const redeemList = document.getElementById('redeemList');
 const abuseList = document.getElementById('abuseList');
 const adminLogList = document.getElementById('adminLogList');
+
+onAuthStateChanged(auth, async (user) => {
+  if (!user) {
+    window.location.href = './index.html';
+    return;
+  }
+
+  const tokenResult = await getIdTokenResult(user, true);
+  const isAdmin = await hasAdminAccess(user, tokenResult);
+
+  if (!isAdmin) {
+    await signOut(auth);
+    window.location.href = './index.html';
+  }
+});
 
 window.showSection = function showSection(sectionId) {
   document.querySelectorAll('.section').forEach((sec) => {
@@ -239,6 +260,7 @@ window.loadAdminLogs = function loadAdminLogs() {
   `;
 };
 
-window.logout = function logout() {
+window.logout = async function logout() {
+  await signOut(auth);
   window.location.href = './index.html';
 };

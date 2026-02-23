@@ -8,6 +8,28 @@ Starter structure for a Firebase-backed MovieBox admin panel with Cloud Function
 - `admin-panel/` static frontend pages
 - `functions/` backend services scaffold for future secure upgrades
 
+## Admin login flow
+
+The admin panel now supports:
+
+- Email + password login
+- Google sign-in (for Gmail accounts)
+
+After authentication, access is granted only when **any one** of these checks passes:
+
+1. Firebase custom claim `admin: true`
+2. Firestore document exists at `admins/{uid}`
+3. Any document in `admins` collection has `email` matching the signed-in user email
+
+### To allow another Gmail/admin account
+
+1. Open Firestore.
+2. Create collection: `admins` (if missing).
+3. Add one of the following:
+   - Document ID = user's UID (data can be empty), or
+   - Any document with field: `email: "another-admin@gmail.com"`
+4. Ensure Google provider is enabled in Firebase Authentication.
+
 ## Next steps
 
 1. Replace Firebase project ID in `.firebaserc`.
