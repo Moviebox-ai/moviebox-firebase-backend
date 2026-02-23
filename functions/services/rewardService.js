@@ -39,7 +39,7 @@ module.exports = {
       throw new functions.https.HttpsError('failed-precondition', 'Rewards disabled');
     }
 
-    return db.runTransaction(async (transaction) => {
+    const transactionResult = await db.runTransaction(async (transaction) => {
       const userSnap = await transaction.get(userRef);
 
       if (!userSnap.exists) {
@@ -55,6 +55,35 @@ module.exports = {
       const currentCoins = Number(user.totalCoins) || 0;
       const currentDailyAdCount = Number(user.dailyAdCount) || 0;
       const currentSuspiciousCount = Number(user.suspiciousCount) || 0;
+      const lastRewardMillis = Number(user.lastRewardMillis) || 0;
+      const now = Date.now();
+      const minRewardIntervalMs = 20000;
+      const suspiciousBanThreshold = 3;
+
+      if (now - lastRewardMillis < minRewardIntervalMs) {
+        const updatedSuspiciousCount = currentSuspiciousCount + 1;
+
+        if (updatedSuspiciousCount >= suspiciousBanThreshold) {
+          transaction.update(userRef, {
+            banned: true,
+            suspiciousCount: updatedSuspiciousCount
+          });
+          return {
+            shouldThrow: true,
+            code: 'permission-denied',
+            message: 'Auto banned for abuse'
+          };
+        }
+
+        transaction.update(userRef, {
+          suspiciousCount: updatedSuspiciousCount
+        });
+        return {
+          shouldThrow: true,
+          code: 'resource-exhausted',
+          message: 'Too fast reward attempt'
+        };
+      }
 
       if (currentDailyAdCount >= dailyLimit) {
         throw new functions.https.HttpsError('failed-precondition', 'Daily limit reached');
@@ -63,11 +92,18 @@ module.exports = {
       transaction.update(userRef, {
         totalCoins: currentCoins + coinPerReward,
         dailyAdCount: currentDailyAdCount + 1,
+        lastRewardMillis: now,
         lastRewardTime: admin.firestore.FieldValue.serverTimestamp(),
-        suspiciousCount: currentSuspiciousCount
+        suspiciousCount: 0
       });
 
       return { success: true };
     });
+
+    if (transactionResult.shouldThrow) {
+      throw new functions.https.HttpsError(transactionResult.code, transactionResult.message);
+    }
+
+    return transactionResult;
   })
 };
