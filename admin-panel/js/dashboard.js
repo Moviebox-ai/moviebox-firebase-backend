@@ -52,10 +52,17 @@ async function loadFraudStats() {
 loadFraudStats();
 
 window.saveSettings = function saveSettings() {
+  const minDailyLimit = 10;
+  const maxDailyLimit = 15;
   const rewardsEnabled = document.getElementById('rewardsEnabled')?.checked ?? false;
   const maintenanceMode = document.getElementById('maintenanceMode')?.checked ?? false;
-  const dailyLimit = Number(document.getElementById('dailyLimit')?.value ?? 0);
+  const rawDailyLimit = Number(document.getElementById('dailyLimit')?.value ?? 0);
+  const dailyLimit = Math.min(maxDailyLimit, Math.max(minDailyLimit, Math.trunc(rawDailyLimit)));
   const coinPerReward = Number(document.getElementById('coinPerReward')?.value ?? 0);
+
+  if (rawDailyLimit !== dailyLimit) {
+    console.warn(`Daily limit adjusted to supported range (${minDailyLimit}-${maxDailyLimit}).`);
+  }
 
   console.log('Settings saved (local preview):', {
     rewardsEnabled,
