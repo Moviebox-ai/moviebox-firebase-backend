@@ -64,6 +64,62 @@ exports.logBehaviorEvent = functions.https.onCall(async (data, context) => {
   return { success: true };
 });
 
+exports.aiRiskEngine = functions.firestore
+  .document('behaviorLogs/{logId}')
+  .onCreate(async (snap) => {
+    const data = snap.data() || {};
+    const uid = data.uid;
+
+    if (!uid) {
+      return null;
+    }
+
+    const logsRef = admin.firestore().collection('behaviorLogs').where('uid', '==', uid);
+    const logs = await logsRef.get();
+
+    let totalClicks = 0;
+    let totalDuration = 0;
+    let count = 0;
+
+    logs.forEach((doc) => {
+      totalClicks += Number(doc.data().rewardClicks) || 0;
+      totalDuration += Number(doc.data().sessionDuration) || 0;
+      count += 1;
+    });
+
+    const avgClicks = count > 0 ? totalClicks / count : 0;
+
+    let riskScore = 0;
+
+    if (Number(data.rewardClicks) > avgClicks * 2) {
+      riskScore += 40;
+    }
+
+    if (Number(data.sessionDuration) < 60000) {
+      riskScore += 30;
+    }
+
+    if (Number(data.sessionDuration) > 8 * 60 * 60 * 1000) {
+      riskScore += 20;
+    }
+
+    const userRef = admin.firestore().collection('users').doc(uid);
+
+    await userRef.set(
+      {
+        riskScore,
+        riskUpdatedAt: admin.firestore.FieldValue.serverTimestamp()
+      },
+      { merge: true }
+    );
+
+    if (riskScore >= 80) {
+      await userRef.set({ banned: true }, { merge: true });
+    }
+
+    return null;
+  });
+
 exports.calculateRisk = functions.firestore
   .document('riskProfile/{uid}')
   .onWrite(async (change, context) => {
