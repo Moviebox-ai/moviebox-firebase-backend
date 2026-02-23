@@ -13,57 +13,46 @@ import {
 } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
 import { auth, db } from './firebase-config.js';
 
-const stats = document.getElementById('stats');
+const totalUsersEl = document.getElementById('totalUsers');
+const totalCoinsEl = document.getElementById('totalCoins');
+const bannedUsersEl = document.getElementById('bannedUsers');
 const userList = document.getElementById('userList');
 const redeemList = document.getElementById('redeemList');
 const abuseList = document.getElementById('abuseList');
 const adminLogList = document.getElementById('adminLogList');
 
-if (stats) {
-  stats.innerHTML = `
-    <ul>
-      <li>Total Users: --</li>
-      <li>Pending Redemptions: --</li>
-      <li>Rewards Issued: --</li>
-    </ul>
-  `;
-}
+window.showSection = function showSection(sectionId) {
+  const sections = document.querySelectorAll('.section');
+  sections.forEach((section) => {
+    section.classList.toggle('hidden', section.id !== sectionId);
+  });
+};
 
-async function loadFraudStats() {
-  if (!stats) {
+async function loadOverviewStats() {
+  if (!totalUsersEl || !totalCoinsEl || !bannedUsersEl) {
     return;
   }
 
   const snapshot = await getDocs(collection(db, 'users'));
 
-  let suspicious = 0;
-  let highRisk = 0;
-  let banned = 0;
+  let totalUsers = 0;
+  let totalCoins = 0;
+  let bannedUsers = 0;
 
-  snapshot.forEach((doc) => {
-    const user = doc.data();
+  snapshot.forEach((docSnap) => {
+    const user = docSnap.data();
 
-    if (user.riskLevel === 'suspicious') suspicious += 1;
-    if (user.riskLevel === 'high') highRisk += 1;
-    if (user.banned) banned += 1;
+    totalUsers += 1;
+    totalCoins += Number(user.totalCoins ?? 0);
+    if (user.banned) bannedUsers += 1;
   });
 
-  const currentStats = stats.querySelector('ul');
-  if (!currentStats) {
-    return;
-  }
-
-  currentStats.insertAdjacentHTML(
-    'beforeend',
-    `
-      <li>Suspicious Users: ${suspicious}</li>
-      <li>High Risk Users: ${highRisk}</li>
-      <li>Banned Users: ${banned}</li>
-    `,
-  );
+  totalUsersEl.textContent = `Total Users: ${totalUsers}`;
+  totalCoinsEl.textContent = `Total Coins: ${totalCoins}`;
+  bannedUsersEl.textContent = `Banned Users: ${bannedUsers}`;
 }
 
-loadFraudStats();
+void loadOverviewStats();
 
 window.saveSettings = function saveSettings() {
   const minDailyLimit = 10;
@@ -196,6 +185,7 @@ window.banUser = async function banUser(userId, currentlyBanned = false) {
 
   lastVisible = null;
   void window.loadUsers();
+  void loadOverviewStats();
 };
 
 window.loadRedeems = function loadRedeems() {

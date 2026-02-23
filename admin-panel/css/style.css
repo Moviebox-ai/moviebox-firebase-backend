@@ -72,3 +72,68 @@ button {
 input:last-child {
   margin-bottom: 0;
 }
+
+body.dashboard-page {
+  align-items: stretch;
+  justify-content: flex-start;
+  background: #e5e7eb;
+}
+
+.layout {
+  display: flex;
+  width: 100%;
+  min-height: 100vh;
+}
+
+.sidebar {
+  width: 240px;
+  background: #111827;
+  color: #f9fafb;
+  padding: 1.5rem 1rem;
+}
+
+.sidebar ul {
+  list-style: none;
+  padding: 0;
+  margin: 1rem 0 0;
+}
+
+.sidebar li {
+  padding: 0.75rem;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.sidebar li:hover {
+  background: #1f2937;
+}
+
+.main {
+  flex: 1;
+  padding: 2rem;
+}
+
+.section.hidden {
+  display: none;
+}
+
+.cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 1rem;
+}
+
+.stat {
+  width: auto;
+  min-height: 90px;
+  justify-content: center;
+  font-weight: 700;
+}
+
+#userList,
+#redeemList,
+#abuseList {
+  margin-top: 1rem;
+  display: grid;
+  gap: 0.75rem;
+}
