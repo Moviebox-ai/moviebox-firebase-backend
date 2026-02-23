@@ -3,17 +3,18 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>MovieBox Admin Login</title>
+  <title>Moviebox Admin Login</title>
   <link rel="stylesheet" href="./css/style.css" />
 </head>
 <body>
-  <main class="container">
-    <h1>MovieBox Admin</h1>
-    <p>Login placeholder for admin authentication.</p>
+  <div class="card">
+    <h2>Admin Login</h2>
+    <input type="email" id="email" placeholder="Admin Email" />
+    <input type="password" id="password" placeholder="Password" />
     <button id="login-btn">Login</button>
-  </main>
+    <p id="error"></p>
+  </div>
 
-  <script type="module" src="./js/firebase-config.js"></script>
   <script type="module" src="./js/auth.js"></script>
 </body>
 </html>

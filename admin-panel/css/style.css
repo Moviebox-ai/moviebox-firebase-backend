@@ -6,22 +6,50 @@
 
 body {
   margin: 0;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
+.card,
 .container {
-  max-width: 720px;
-  margin: 3rem auto;
+  width: min(92vw, 420px);
   padding: 2rem;
   background: #ffffff;
   border-radius: 12px;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
 }
 
+h2,
+h1 {
+  margin-top: 0;
+}
+
+input {
+  width: 100%;
+  box-sizing: border-box;
+  margin-bottom: 0.75rem;
+  padding: 0.75rem;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 0.95rem;
+}
+
 button {
-  padding: 0.6rem 1rem;
+  width: 100%;
+  padding: 0.75rem 1rem;
   border: 0;
   border-radius: 8px;
   background: #2563eb;
   color: #fff;
   cursor: pointer;
+  font-size: 0.95rem;
+}
+
+#error {
+  min-height: 1.25rem;
+  margin-bottom: 0;
+  color: #dc2626;
+  font-size: 0.9rem;
 }
