@@ -2,6 +2,7 @@
   font-family: Arial, sans-serif;
   color: #111827;
   background: #f3f4f6;
+  --spacing-16dp: 1rem;
 }
 
 body {
@@ -19,17 +20,21 @@ body {
   background: #ffffff;
   border-radius: 12px;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-16dp);
 }
 
 h2,
 h1 {
   margin-top: 0;
+  margin-bottom: var(--spacing-16dp);
 }
 
 input {
   width: 100%;
   box-sizing: border-box;
-  margin-bottom: 0.75rem;
+  margin-bottom: var(--spacing-16dp);
   padding: 0.75rem;
   border: 1px solid #d1d5db;
   border-radius: 8px;
@@ -52,4 +57,10 @@ button {
   margin-bottom: 0;
   color: #dc2626;
   font-size: 0.9rem;
+}
+
+.card > :last-child,
+.container > :last-child,
+input:last-child {
+  margin-bottom: 0;
 }
