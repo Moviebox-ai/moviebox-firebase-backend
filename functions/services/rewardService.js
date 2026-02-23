@@ -54,6 +54,7 @@ module.exports = {
 
       const currentCoins = Number(user.totalCoins) || 0;
       const currentDailyAdCount = Number(user.dailyAdCount) || 0;
+      const currentSuspiciousCount = Number(user.suspiciousCount) || 0;
 
       if (currentDailyAdCount >= dailyLimit) {
         throw new functions.https.HttpsError('failed-precondition', 'Daily limit reached');
@@ -61,7 +62,9 @@ module.exports = {
 
       transaction.update(userRef, {
         totalCoins: currentCoins + coinPerReward,
-        dailyAdCount: currentDailyAdCount + 1
+        dailyAdCount: currentDailyAdCount + 1,
+        lastRewardTime: admin.firestore.FieldValue.serverTimestamp(),
+        suspiciousCount: currentSuspiciousCount
       });
 
       return { success: true };
