@@ -22,10 +22,10 @@ const abuseList = document.getElementById('abuseList');
 const adminLogList = document.getElementById('adminLogList');
 
 window.showSection = function showSection(sectionId) {
-  const sections = document.querySelectorAll('.section');
-  sections.forEach((section) => {
-    section.classList.toggle('hidden', section.id !== sectionId);
+  document.querySelectorAll('.section').forEach((sec) => {
+    sec.classList.add('hidden');
   });
+  document.getElementById(sectionId).classList.remove('hidden');
 };
 
 async function loadOverviewStats() {
