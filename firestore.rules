@@ -46,6 +46,24 @@ service cloud.firestore {
       allow delete: if false;
     }
 
+    match /abuseLogs/{logId} {
+      allow read: if isAdmin();
+
+      allow create: if request.auth != null
+                    && request.resource.data.keys()
+                       .hasOnly(["uid", "reason", "ip", "timestamp"])
+                    && request.resource.data.uid == request.auth.uid
+                    && request.resource.data.reason is string
+                    && request.resource.data.reason.size() > 0
+                    && request.resource.data.reason.size() <= 500
+                    && request.resource.data.ip is string
+                    && request.resource.data.ip.size() > 0
+                    && request.resource.data.ip.size() <= 64
+                    && request.resource.data.timestamp is timestamp;
+
+      allow update, delete: if false;
+    }
+
     match /admins/{adminId} {
       allow read: if request.auth != null
                   && request.auth.uid == adminId;
