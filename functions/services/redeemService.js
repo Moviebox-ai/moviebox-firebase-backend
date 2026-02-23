@@ -11,10 +11,11 @@ module.exports = {
       throw new functions.https.HttpsError('unauthenticated', 'Login required');
     }
 
-    const amount = Number(data?.amount);
+    const rawAmount = data?.coins ?? data?.amount;
+    const amount = Number(rawAmount);
 
     if (!Number.isInteger(amount) || amount <= 0) {
-      throw new functions.https.HttpsError('invalid-argument', 'Valid redeem amount required');
+      throw new functions.https.HttpsError('invalid-argument', 'Valid redeem coin amount required');
     }
 
     const uid = context.auth.uid;
@@ -42,6 +43,7 @@ module.exports = {
       transaction.set(db.collection('redeemRequests').doc(), {
         uid,
         email: user.email || null,
+        coins: amount,
         amount,
         status: 'pending',
         createdAt: admin.firestore.FieldValue.serverTimestamp()
