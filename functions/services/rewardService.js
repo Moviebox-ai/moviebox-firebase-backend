@@ -1,6 +1,8 @@
 const functions = require('firebase-functions');
 const admin = require('firebase-admin');
 const { normalizeRewardIntent } = require('../utils/rewardIntent');
+const { getBaseRiskScore, applyRiskDeltas, getRiskLevel } = require('../riskEngine');
+const { getRewardRequestSignals } = require('../behaviorTracker');
 
 if (admin.apps.length === 0) {
   admin.initializeApp();
@@ -82,32 +84,31 @@ module.exports = {
 
       const currentCoins = Number(user.totalCoins) || 0;
       const currentDailyAdCount = Number(user.dailyAdCount) || 0;
-      let riskScore = Math.max(0, (Number(user.riskScore) || 0) - 10);
-
-      const lastRewardMillis = Number(user.lastRewardMillis) || 0;
       const now = Date.now();
-      const minRewardIntervalMs = 20000;
-      const timeDiff = now - lastRewardMillis;
+      let riskScore = getBaseRiskScore(user.riskScore);
 
-      if (timeDiff < minRewardIntervalMs) {
-        riskScore += 20;
-      }
-
-      if (user.deviceHash && deviceHash && user.deviceHash !== deviceHash) {
-        riskScore += 40;
-      }
+      let crowdedIp = false;
 
       if (ip) {
         const ipSnapshot = await db.collection('users').where('lastIP', '==', ip).get();
-
-        if (ipSnapshot.size > 3) {
-          riskScore += 30;
-        }
+        crowdedIp = ipSnapshot.size > 3;
       }
 
-      let riskLevel = 'safe';
+      const behaviorSignals = getRewardRequestSignals({
+        now,
+        user,
+        incomingDeviceHash: deviceHash,
+        crowdedIp
+      });
 
-      if (riskScore >= 100) {
+      riskScore = applyRiskDeltas({
+        baseRiskScore: riskScore,
+        ...behaviorSignals
+      });
+
+      const riskLevel = getRiskLevel(riskScore);
+
+      if (riskLevel === 'banned') {
         transaction.update(userRef, {
           banned: true,
           riskScore,
@@ -124,7 +125,7 @@ module.exports = {
         };
       }
 
-      if (riskScore >= 60) {
+      if (riskLevel === 'high') {
         transaction.update(userRef, {
           riskScore,
           riskLevel: 'high'
@@ -138,10 +139,6 @@ module.exports = {
           riskScore,
           riskLevel: 'high'
         };
-      }
-
-      if (riskScore >= 30) {
-        riskLevel = 'suspicious';
       }
 
       if (currentDailyAdCount >= dailyLimit) {
