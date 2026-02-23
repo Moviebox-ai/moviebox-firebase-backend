@@ -3,17 +3,42 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>MovieBox Admin Dashboard</title>
+  <title>Moviebox Admin Dashboard</title>
   <link rel="stylesheet" href="./css/style.css" />
 </head>
 <body>
-  <main class="container">
-    <h1>Dashboard</h1>
-    <p>Manage rewards, redemptions, and users from here.</p>
-    <section id="stats"></section>
-  </main>
+  <h1>Moviebox Admin Panel</h1>
 
-  <script type="module" src="./js/firebase-config.js"></script>
+  <h2>Dashboard Stats</h2>
+  <div class="card">
+    <div id="stats"></div>
+  </div>
+
+  <h2>App Settings</h2>
+  <div class="card">
+    <label><input type="checkbox" id="rewardsEnabled" /> Rewards Enabled</label>
+    <label><input type="checkbox" id="maintenanceMode" /> Maintenance Mode</label>
+    <label for="dailyLimit">Daily Limit</label>
+    <input type="number" id="dailyLimit" />
+    <label for="coinPerReward">Coin Per Reward</label>
+    <input type="number" id="coinPerReward" />
+    <button onclick="saveSettings()">Save Settings</button>
+  </div>
+
+  <h2>User Management</h2>
+  <div class="card">
+    <button onclick="loadUsers()">Load Users</button>
+    <div id="userList"></div>
+  </div>
+
+  <h2>Redeem Management</h2>
+  <div class="card">
+    <button onclick="loadRedeems()">Load Redeems</button>
+    <div id="redeemList"></div>
+  </div>
+
+  <button onclick="logout()">Logout</button>
+
   <script type="module" src="./js/dashboard.js"></script>
 </body>
 </html>
