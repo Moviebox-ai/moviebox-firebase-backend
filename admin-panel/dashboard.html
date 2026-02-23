@@ -18,23 +18,36 @@
   <div class="card">
     <label><input type="checkbox" id="rewardsEnabled" /> Rewards Enabled</label>
     <label><input type="checkbox" id="maintenanceMode" /> Maintenance Mode</label>
-    <label for="dailyLimit">Daily Limit</label>
-    <input type="number" id="dailyLimit" />
-    <label for="coinPerReward">Coin Per Reward</label>
-    <input type="number" id="coinPerReward" />
-    <button onclick="saveSettings()">Save Settings</button>
+    <input type="number" id="dailyLimit" placeholder="Daily Limit" />
+    <input type="number" id="coinPerReward" placeholder="Coin Per Reward" />
+    <button onclick="saveSettings()">Save</button>
   </div>
 
   <h2>User Management</h2>
   <div class="card">
+    <input type="text" id="searchEmail" placeholder="Search by email" />
+    <button onclick="searchUser()">Search</button>
     <button onclick="loadUsers()">Load Users</button>
     <div id="userList"></div>
+    <button onclick="loadMoreUsers()">Load More</button>
   </div>
 
-  <h2>Redeem Management</h2>
+  <h2>Redeem Requests</h2>
   <div class="card">
     <button onclick="loadRedeems()">Load Redeems</button>
     <div id="redeemList"></div>
+  </div>
+
+  <h2>Fraud Logs</h2>
+  <div class="card">
+    <button onclick="loadAbuseLogs()">Load Logs</button>
+    <div id="abuseList"></div>
+  </div>
+
+  <h2>Admin Activity Logs</h2>
+  <div class="card">
+    <button onclick="loadAdminLogs()">Load Admin Logs</button>
+    <div id="adminLogList"></div>
   </div>
 
   <button onclick="logout()">Logout</button>
