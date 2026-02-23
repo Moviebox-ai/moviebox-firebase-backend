@@ -4,6 +4,8 @@ import { db } from './firebase-config.js';
 const stats = document.getElementById('stats');
 const userList = document.getElementById('userList');
 const redeemList = document.getElementById('redeemList');
+const abuseList = document.getElementById('abuseList');
+const adminLogList = document.getElementById('adminLogList');
 
 if (stats) {
   stats.innerHTML = `
@@ -84,6 +86,35 @@ window.loadUsers = function loadUsers() {
   `;
 };
 
+window.searchUser = function searchUser() {
+  if (!userList) {
+    return;
+  }
+
+  const email = document.getElementById('searchEmail')?.value?.trim();
+
+  userList.innerHTML = `
+    <ul>
+      <li>${email ? `No results found for ${email}.` : 'Enter an email address to search.'}</li>
+    </ul>
+  `;
+};
+
+window.loadMoreUsers = function loadMoreUsers() {
+  if (!userList) {
+    return;
+  }
+
+  userList.insertAdjacentHTML(
+    'beforeend',
+    `
+      <ul>
+        <li>No additional users available.</li>
+      </ul>
+    `,
+  );
+};
+
 window.loadRedeems = function loadRedeems() {
   if (!redeemList) {
     return;
@@ -92,6 +123,30 @@ window.loadRedeems = function loadRedeems() {
   redeemList.innerHTML = `
     <ul>
       <li>No redeems loaded yet.</li>
+    </ul>
+  `;
+};
+
+window.loadAbuseLogs = function loadAbuseLogs() {
+  if (!abuseList) {
+    return;
+  }
+
+  abuseList.innerHTML = `
+    <ul>
+      <li>No fraud logs loaded yet.</li>
+    </ul>
+  `;
+};
+
+window.loadAdminLogs = function loadAdminLogs() {
+  if (!adminLogList) {
+    return;
+  }
+
+  adminLogList.innerHTML = `
+    <ul>
+      <li>No admin logs loaded yet.</li>
     </ul>
   `;
 };
