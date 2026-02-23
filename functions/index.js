@@ -64,3 +64,50 @@ exports.trackBehavior = functions.https.onCall(async (data, context) => {
 
   return { success: true };
 });
+
+exports.calculateRisk = functions.firestore
+  .document('riskProfile/{uid}')
+  .onWrite(async (change, context) => {
+    if (!change.after.exists) {
+      return null;
+    }
+
+    const data = change.after.data() || {};
+    const uid = context.params.uid;
+
+    let score = 0;
+
+    if (Number(data.rewardClicks) > 20) {
+      score += 30;
+    }
+
+    if (Number(data.sessionDuration) < 60000) {
+      score += 30;
+    }
+
+    if (Number(data.sessionDuration) > 8 * 60 * 60 * 1000) {
+      score += 20;
+    }
+
+    let level = 'LOW';
+    if (score >= 70) {
+      level = 'HIGH';
+    } else if (score >= 40) {
+      level = 'MEDIUM';
+    }
+
+    await admin
+      .firestore()
+      .collection('users')
+      .doc(uid)
+      .set(
+        {
+          riskScore: score,
+          riskLevel: level,
+          ...(score >= 80 && { banned: true })
+        },
+        { merge: true }
+      );
+
+    return null;
+  });
