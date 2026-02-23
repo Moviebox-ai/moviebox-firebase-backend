@@ -24,6 +24,16 @@ module.exports = {
     }
 
     const config = configSnap.data();
+    const coinPerReward = Number(config.coinPerReward);
+    const dailyLimit = Number(config.dailyLimit);
+
+    if (!Number.isFinite(coinPerReward) || coinPerReward <= 0) {
+      throw new functions.https.HttpsError('failed-precondition', 'Invalid coin reward config');
+    }
+
+    if (!Number.isFinite(dailyLimit) || dailyLimit < 0) {
+      throw new functions.https.HttpsError('failed-precondition', 'Invalid daily limit config');
+    }
 
     if (!config.rewardsEnabled) {
       throw new functions.https.HttpsError('failed-precondition', 'Rewards disabled');
@@ -42,13 +52,16 @@ module.exports = {
         throw new functions.https.HttpsError('permission-denied', 'User banned');
       }
 
-      if (user.dailyAdCount >= config.dailyLimit) {
+      const currentCoins = Number(user.totalCoins) || 0;
+      const currentDailyAdCount = Number(user.dailyAdCount) || 0;
+
+      if (currentDailyAdCount >= dailyLimit) {
         throw new functions.https.HttpsError('failed-precondition', 'Daily limit reached');
       }
 
       transaction.update(userRef, {
-        totalCoins: user.totalCoins + config.coinPerReward,
-        dailyAdCount: user.dailyAdCount + 1
+        totalCoins: currentCoins + coinPerReward,
+        dailyAdCount: currentDailyAdCount + 1
       });
 
       return { success: true };
