@@ -1,15 +1,17 @@
 import {
+  addDoc,
   collection,
   doc,
   getDocs,
   limit,
   orderBy,
   query,
+  serverTimestamp,
   startAfter,
   updateDoc,
   where,
 } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
-import { db } from './firebase-config.js';
+import { auth, db } from './firebase-config.js';
 
 const stats = document.getElementById('stats');
 const userList = document.getElementById('userList');
@@ -184,6 +186,13 @@ window.loadMoreUsers = function loadMoreUsers() {
 window.banUser = async function banUser(userId, currentlyBanned = false) {
   const userRef = doc(db, 'users', userId);
   await updateDoc(userRef, { banned: !currentlyBanned });
+
+  await addDoc(collection(db, 'adminLogs'), {
+    adminUid: auth.currentUser?.uid ?? null,
+    action: 'Ban Toggle',
+    targetUser: userId,
+    timestamp: serverTimestamp(),
+  });
 
   lastVisible = null;
   void window.loadUsers();
